@@ -28,6 +28,10 @@
 		<Copyright>©2020 Ix Software</Copyright>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Tags>build, generator, identity, idgenerator</Tags>
+		<PackageLicenseFile>License.txt</PackageLicenseFile>
+		<PackageProjectUrl>https://github.com/GeirGrusom/IdGenerator</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/GeirGrusom/IdGenerator</RepositoryUrl>
+		<RepositoryType>Git</RepositoryType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -42,6 +46,10 @@
 	<ItemGroup>
 		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 		<None Update="tools\*.ps1" Pack="true" PackagePath="" />
+		<None Include="..\..\License.txt">
+		  <Pack>True</Pack>
+		  <PackagePath></PackagePath>
+		</None>
 	</ItemGroup>
 	
 </Project>
