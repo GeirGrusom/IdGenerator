@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<NoPackageAnalysis>true</NoPackageAnalysis>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" />
+	</ItemGroup>
+
+	<Target Name="ReadReleaseNotes" BeforeTargets="GenerateNuspec">
+		<ReadLinesFromFile File="../../ReleaseNotes.txt">
+			<Output TaskParameter="Lines" ItemName="ReleaseNotesLines" />
+		</ReadLinesFromFile>
+		<PropertyGroup>
+			<PackageReleaseNotes>@(ReleaseNotesLines, '%0a')</PackageReleaseNotes>
+		</PropertyGroup>
+	</Target>
+
+	<PropertyGroup>
+		<RestoreAdditionalProjectSources>https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json ;$(RestoreAdditionalProjectSources)</RestoreAdditionalProjectSources>
+		<AssemblyName>IxSoftware.Generators.IdGenerator</AssemblyName>
+		<RootNamespace>IxSoftware.Generators</RootNamespace>
+		<Authors>Henning Moe</Authors>
+		<Company>Ix Software AS</Company>
+		<Product>IdGenerator</Product>
+		<Copyright>©2020 Ix Software</Copyright>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Tags>build, generator, identity, idgenerator</Tags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="GitVersionTask" Version="5.3.7">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.6.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.0.0" PrivateAssets="all" />
+	</ItemGroup>
+
+</Project>
