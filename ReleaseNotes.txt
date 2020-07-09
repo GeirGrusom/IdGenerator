@@ -1,3 +1,9 @@
+# 1.1
+
+- `Equals` for when the type is a string now use ordinal compare rather than culture dependent comparison which is the default
+- Small performance and memory improvements
+- Added error message if trying to build with an old version of MSBuild or .NET Core toolchain
+
 # 1.0
 
 - First version
