@@ -5,6 +5,10 @@
 		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 
+	<Target BeforeTargets="BeforeBuild" Name="CheckMSBuildVersion">
+		<Error Condition="'$(MSBuildVersion)'&lt;'16.7'" Text="This project requires Visual Studio Preview to build but is currently building in $(MSBuildVersion)." />
+	</Target>
+
 	<ItemGroup>
 		<PackageReference Include="nunit" Version="3.12.0" />
 		<PackageReference Include="NUnit3TestAdapter" Version="3.16.1">
@@ -15,6 +19,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\IdGenerator\IdGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="..\IdGenerator\IdGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false">
+		  <PrivateAssets>all</PrivateAssets>
+		</ProjectReference>
 	</ItemGroup>
 </Project>

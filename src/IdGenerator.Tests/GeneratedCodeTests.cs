@@ -21,6 +21,11 @@ namespace IdGenerator.Tests
         private readonly decimal value;
     }
 
+    public readonly partial struct StringTest : IEquatable<StringTest>
+    {
+        private readonly string value;
+    }
+
     public class GeneratedCodeTests
     {
         [Test]
@@ -58,7 +63,6 @@ namespace IdGenerator.Tests
             Thread.CurrentThread.CurrentCulture = culture;
 
             decimal i = 123.456m;
-            var s = i.ToString();
             DecimalTest subject = i;
 
             // Act
@@ -84,6 +88,30 @@ namespace IdGenerator.Tests
             // Arrange
             var a = (IntTest)1;
             var b = 1;
+
+            // Act
+            // Assert
+            Assert.That(a, Is.Not.EqualTo(b));
+        }
+
+        [Test]
+        public void Equals_String_SameValue_ReturnsTrue()
+        {
+            // Arrange
+            var a = (StringTest)123.0.ToString();
+            var b = (StringTest)123.ToString();
+
+            // Act
+            // Assert
+            Assert.That(a, Is.EqualTo(b));
+        }
+
+        [Test]
+        public void Equals_String_DifferentValues_ReturnsTrue()
+        {
+            // Arrange
+            var a = (StringTest)123.0.ToString();
+            var b = (StringTest)1234.ToString();
 
             // Act
             // Assert

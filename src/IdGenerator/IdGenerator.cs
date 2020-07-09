@@ -40,90 +40,118 @@ namespace IxSoftware.Generators
 
             public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
             {
-                if(syntaxNode.IsKind(SyntaxKind.StructDeclaration))
+                if(!syntaxNode.IsKind(SyntaxKind.StructDeclaration))
                 {
-                    var s = (StructDeclarationSyntax)syntaxNode;
-                    
-                    // Struct must be partial
-                    if(!s.IsPartial())
-                    {
-                        return;
-                    }
-
-                    // Struct must have IEquatable<T> where T is the type of the struct
-                    if(s.BaseList is null || !s.BaseList.Types.Select(x => x.Type).OfType<GenericNameSyntax>().Any(x => x.Identifier.ValueText == nameof(IEquatable<int>) && x.TypeArgumentList.Arguments.Any(x => x.ToString() == s.Identifier.ToString())))
-                    {
-                        return;
-                    }
-
-                    
-                    var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic()).ToArray();
-
-                    // Struct must have a single non-static readonly field.
-                    if (fields.Length != 1)
-                    {
-                        return;
-                    }
-
-                    var field = fields[0];
-
-                    if(!field.IsReadOnly())
-                    {
-                        return;
-                    }
-
-                    // Find out if struct has a ToString() method already defined.
-                    var toStringMethod = s.Members.OfType<MethodDeclarationSyntax>().Where(m => m.IsOverride() && m.Identifier.Text == "ToString" && !m.ParameterList.Parameters.Any()).SingleOrDefault();
-
-                    var f = fields[0];
-                    Nodes.Add(new StructInfo(s, s.Identifier, f.Declaration.Variables[0].Identifier, f.Declaration.Type, toStringMethod != null));
+                    return;
                 }
+                var s = (StructDeclarationSyntax)syntaxNode;
+                    
+                // Struct must be partial
+                if(!s.IsPartial())
+                {
+                    return;
+                }
+
+                // Struct must have IEquatable<T> where T is the type of the struct
+                if(s.BaseList is null || !s.BaseList.Types.Select(x => x.Type).OfType<GenericNameSyntax>().Any(x => string.Equals(x.Identifier.ValueText, nameof(IEquatable<int>), StringComparison.Ordinal) && x.TypeArgumentList.Arguments.Any(x => string.Equals(x.ToString(), s.Identifier.ToString(), StringComparison.InvariantCulture))))
+                {
+                    return;
+                }
+                    
+                var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic()).ToArray();
+
+                // Struct must have a single non-static readonly field.
+                if (fields.Length != 1)
+                {
+                    return;
+                }
+
+                var field = fields[0];
+
+                if(!field.IsReadOnly())
+                {
+                    return;
+                }
+
+                // Find out if struct has a ToString() method already defined.
+                var toStringMethod = s.Members.OfType<MethodDeclarationSyntax>().Where(m => m.IsOverride() && string.Equals(m.Identifier.Text, nameof(object.ToString), StringComparison.Ordinal) && !m.ParameterList.Parameters.Any()).SingleOrDefault();
+
+                var f = fields[0];
+                Nodes.Add(new StructInfo(s, s.Identifier, f.Declaration.Variables[0].Identifier, f.Declaration.Type, toStringMethod != null));
             }
         }
 
-        private string MakeTypeName(TypeSyntax type, SemanticModel semanticModel)
+        private static string? MakeTypeName(TypeSyntax type, SemanticModel semanticModel)
         {
             if (type is TupleTypeSyntax tupleType)
             {
-                var builder = new StringBuilder(tupleType.Span.Length);
-                builder.Append('(');
-                for (int i = 0; i < tupleType.Elements.Count; i++)
-                {
-                    var item = tupleType.Elements[i];
-                    builder.Append(MakeTypeName(item.Type, semanticModel));
-                    if (!item.Identifier.IsMissing)
-                    {
-                        builder.Append(' ');
-                        builder.Append(item.Identifier.ValueText);
-                    }
-                    if(i < tupleType.Elements.Count - 1)
-                    {
-                        builder.Append(", ");
-                    }
-                }
-                builder.Append(')');
-                return builder.ToString();
+                return MakeTupleTypeName(semanticModel, tupleType);
             }
             else
             {
                 var typeSymbol = semanticModel.GetSymbolInfo(type);
+                if(typeSymbol.Symbol is null)
+                {
+                    return null;
+                }
                 return $"global::{typeSymbol.Symbol.ContainingNamespace}.{typeSymbol.Symbol.Name}";
             }
         }
 
+        private static string MakeTupleTypeName(SemanticModel semanticModel, TupleTypeSyntax tupleType)
+        {
+            var builder = new StringBuilder(tupleType.Span.Length);
+            builder.Append('(');
+            for (int i = 0; i < tupleType.Elements.Count; i++)
+            {
+                var item = tupleType.Elements[i];
+                builder.Append(MakeTypeName(item.Type, semanticModel));
+                if (!item.Identifier.IsMissing)
+                {
+                    builder.Append(' ');
+                    builder.Append(item.Identifier.ValueText);
+                }
+                if (i < tupleType.Elements.Count - 1)
+                {
+                    builder.Append(", ");
+                }
+            }
+            builder.Append(')');
+            return builder.ToString();
+        }
+
         public void Execute(SourceGeneratorContext context)
         {
-            var syntaxReceiver = (StructSyntaxReceiver)context.SyntaxReceiver;
-
-            foreach(var s in syntaxReceiver.Nodes)
+            var syntaxReceiver = (StructSyntaxReceiver)(context.SyntaxReceiver ?? throw new InvalidOperationException("Missing syntax receiver!"));
+            if(syntaxReceiver is null)
             {
-                var semanticModel = context.Compilation.GetSemanticModel(s.Identifier.SyntaxTree);
+                return;
+            }
+
+            var result = new StringBuilder(512);
+
+            foreach (var s in syntaxReceiver.Nodes)
+            {
+                var tree = s.Identifier.SyntaxTree;
+                if(tree is null)
+                {
+                    continue;
+                }
+
+                var semanticModel = context.Compilation.GetSemanticModel(tree);
                 string name = s.Identifier.ToString();
                 
                 var symbol = semanticModel.GetDeclaredSymbol(s.Struct);
+                string? typeName = MakeTypeName(s.ValueType, semanticModel);
+                if(typeName is null || symbol is null)
+                {
+                    continue;
+                }
 
-                string typeName = MakeTypeName(s.ValueType, semanticModel);
-                var result = new StringBuilder(512);
+                result.Clear();
+
+                var isString = string.Equals(typeName, "global::System.String", StringComparison.Ordinal);
+
                 string text = @$"
 namespace {symbol.ContainingNamespace}
 {{  
@@ -134,8 +162,20 @@ namespace {symbol.ContainingNamespace}
         {{
             this.{s.Value} = value;
         }}
+";
+                result.Append(text);
 
-        public bool Equals({s.Identifier} other) => this.{s.Value}.Equals(other.{s.Value});
+                if(isString)
+                {
+                    result.AppendLine(@$"        public bool Equals({s.Identifier} other) => this.{s.Value}.Equals(other.{s.Value}, global::System.StringComparison.Ordinal);");
+                }
+                else
+                {
+                    result.AppendLine($@"        public bool Equals({s.Identifier} other) => this.{s.Value}.Equals(other.{s.Value});");
+                }
+
+                text = 
+        @$"
 
         public override bool Equals(object obj)
         {{
@@ -156,7 +196,7 @@ namespace {symbol.ContainingNamespace}
         public static bool operator ==({name} lhs, {name} rhs) => lhs.Equals(rhs);
 
         public static bool operator !=({name} lhs, {name} rhs) => !lhs.Equals(rhs);";
-                result.Append(text);
+                result.AppendLine(text);
 
                 if(!s.HasToString)
                 {
