@@ -22,6 +22,12 @@ If you need more than a single field you can use a tuple on the value field. Not
 
 You can add additional methods or static fields.
 
+## Building
+
+This project, or more specifically the test project, requires Visual Studio 16.7 Preview to build and/or the 3.1.400 (or newer) preview version of the .NET Core SDK toolchain. In fact any consumer of the library needs the preview versions of Visual Studio or .NET Core SDK.
+
+If this is in order the project should build either through Visual Studio or `dotnet build`. A NuGet package will get built.
+
 ## License
 
 This program is licensed under the MIT license. Please see license.txt for details.

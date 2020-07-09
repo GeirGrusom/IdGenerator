@@ -7,6 +7,7 @@
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<NoPackageAnalysis>true</NoPackageAnalysis>
 		<DevelopmentDependency>true</DevelopmentDependency>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<Target Name="ReadReleaseNotes" BeforeTargets="GenerateNuspec">
@@ -24,6 +25,8 @@
 		<RootNamespace>IxSoftware.Generators</RootNamespace>
 		<Authors>Henning Moe</Authors>
 		<Company>Ix Software AS</Company>
+		<Description>Implements a source generator that fills in common functionality in identifier types.</Description>
+		<Title>Identifier source generator</Title>
 		<Product>IdGenerator</Product>
 		<Copyright>©2020 Ix Software</Copyright>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -39,7 +42,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.6.0" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.6.0" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.0.0" PrivateAssets="all" />
 	</ItemGroup>
 
@@ -50,6 +53,7 @@
 		  <Pack>True</Pack>
 		  <PackagePath></PackagePath>
 		</None>
+		<None Update="build\*.targets" Pack="true" PackagePath="" />
 	</ItemGroup>
 	
 </Project>

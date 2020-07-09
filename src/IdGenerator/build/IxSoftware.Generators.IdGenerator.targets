@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+	<Target BeforeTargets="BeforeBuild" Name="CheckMsBuildVersion">
+		<Error Condition="'$(MSBuildVersion)'&lt;'16.7'" Text="IxSoftware.Generators.IdGenerator requires Visual Studio 16.7 or newer to build but the current version is $(MSBuildVersion). If you're getting errors about not implementing IEquatable then this is why." />
+	</Target>
+</Project>
