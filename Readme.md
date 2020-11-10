@@ -18,13 +18,13 @@ public readonly partial struct UserId : IEquatable<UserId>
 ```
 
 This is all you have to write. Notice that this struct would not normally compile, so if it doesn't there's probably something wrong.
-If you need more than a single field you can use a tuple on the value field. Note that the field doens't have to be named value.
+If you need more than a single field you can use a tuple on the value field. Note that the field doesn't have to be named value.
 
 You can add additional methods or static fields.
 
 ## Building
 
-This project, or more specifically the test project, requires Visual Studio 16.7 Preview to build and/or the 3.1.400 (or newer) preview version of the .NET Core SDK toolchain. In fact any consumer of the library needs the preview versions of Visual Studio or .NET Core SDK.
+This project, or more specifically the test project, requires Visual Studio 16.8 to build and/or the 5.0 (or newer) version of the .NET Core SDK toolchain.
 
 If this is in order the project should build either through Visual Studio or `dotnet build`. A NuGet package will get built.
 
