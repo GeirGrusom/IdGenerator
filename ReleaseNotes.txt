@@ -1,3 +1,8 @@
+# 1.1.1
+
+- Fix for release of Visual Studio 2019 16.8 which changed the interface for source generators.
+- Removed error messages for old versions of Visual Studio.
+
 # 1.1
 
 - `Equals` for when the type is a string now use ordinal compare rather than culture dependent comparison which is the default

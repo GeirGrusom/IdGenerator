@@ -7,32 +7,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+namespace System.Runtime.CompilerServices
+{
+    public sealed class IsExternalInit { }
+}
+
 namespace IxSoftware.Generators
 {
     [Generator]
     public sealed class IdGenerator : ISourceGenerator
     {
-        private class StructInfo
-        {
-            public StructInfo(StructDeclarationSyntax @struct, SyntaxToken identifier, SyntaxToken value, TypeSyntax valueType, bool hasToString)
-            {
-                this.Struct = @struct;
-                Identifier = identifier;
-                Value = value;
-                ValueType = valueType;
-                HasToString = hasToString;
-            }
-
-            public StructDeclarationSyntax Struct { get; }
-
-            public SyntaxToken Identifier { get; }
-
-            public SyntaxToken Value { get; }
-
-            public TypeSyntax ValueType { get; }
-
-            public bool HasToString { get; }
-        }
+        private record StructInfo(StructDeclarationSyntax Struct, SyntaxToken Identifier, SyntaxToken Value, TypeSyntax ValueType, bool HasToString);
 
         private class StructSyntaxReceiver : ISyntaxReceiver
         {
@@ -46,14 +31,14 @@ namespace IxSoftware.Generators
                 }
                 var s = (StructDeclarationSyntax)syntaxNode;
                     
-                // Struct must be partial
+                // Struct must be partial.
                 if(!s.IsPartial())
                 {
                     return;
                 }
 
-                // Struct must have IEquatable<T> where T is the type of the struct
-                if(s.BaseList is null || !s.BaseList.Types.Select(x => x.Type).OfType<GenericNameSyntax>().Any(x => string.Equals(x.Identifier.ValueText, nameof(IEquatable<int>), StringComparison.Ordinal) && x.TypeArgumentList.Arguments.Any(x => string.Equals(x.ToString(), s.Identifier.ToString(), StringComparison.InvariantCulture))))
+                // Struct must have IEquatable<T> where T is the type of the struct.
+                if(s.BaseList is null || !s.BaseList.HasEquatable(s.Identifier))
                 {
                     return;
                 }
@@ -68,6 +53,7 @@ namespace IxSoftware.Generators
 
                 var field = fields[0];
 
+                // Field must be read only.
                 if(!field.IsReadOnly())
                 {
                     return;
@@ -120,7 +106,7 @@ namespace IxSoftware.Generators
             return builder.ToString();
         }
 
-        public void Execute(SourceGeneratorContext context)
+        public void Execute(GeneratorExecutionContext context)
         {
             var syntaxReceiver = (StructSyntaxReceiver)(context.SyntaxReceiver ?? throw new InvalidOperationException("Missing syntax receiver!"));
             if(syntaxReceiver is null)
@@ -155,7 +141,7 @@ namespace IxSoftware.Generators
                 string text = @$"
 namespace {symbol.ContainingNamespace}
 {{  
-    public readonly partial struct {s.Identifier} : System.IEquatable<{s.Identifier}>
+    public readonly partial struct {s.Identifier} : global::System.IEquatable<{s.Identifier}>
     {{
 
         private {s.Identifier}({typeName} value)
@@ -201,7 +187,7 @@ namespace {symbol.ContainingNamespace}
                 if(!s.HasToString)
                 {
                     result.AppendLine(@$"
-        public override string ToString() => ((System.FormattableString)$""{{{s.Value}}}"").ToString(System.Globalization.CultureInfo.InvariantCulture);");
+        public override string ToString() => ((global::System.FormattableString)$""{{{s.Value}}}"").ToString(global::System.Globalization.CultureInfo.InvariantCulture);");
                 }
 
                 result.AppendLine(@"
@@ -212,7 +198,7 @@ namespace {symbol.ContainingNamespace}
             }
         }
 
-        public void Initialize(InitializationContext context)
+        public void Initialize(GeneratorInitializationContext context)
         {
             context.RegisterForSyntaxNotifications(() => new StructSyntaxReceiver());
         }

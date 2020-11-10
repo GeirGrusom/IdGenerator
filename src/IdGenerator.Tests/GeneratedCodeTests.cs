@@ -26,6 +26,11 @@ namespace IdGenerator.Tests
         private readonly string value;
     }
 
+    public readonly partial struct TupleTest : IEquatable<TupleTest>
+    {
+        private readonly (StringTest, IntTest) value;
+    }
+
     public class GeneratedCodeTests
     {
         [Test]
