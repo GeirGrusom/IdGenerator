@@ -14,11 +14,21 @@ namespace System.Runtime.CompilerServices
 
 namespace IxSoftware.Generators
 {
+    internal enum IsComparable
+    {
+        Comparable,
+        NonComparable
+    }
+
+    internal enum Validation
+    {
+        NoValidation,
+        ValidateBool
+    }
+
     [Generator]
     public sealed class IdGenerator : ISourceGenerator
     {
-        private record StructInfo(StructDeclarationSyntax Struct, SyntaxToken Identifier, SyntaxToken Value, TypeSyntax ValueType, bool HasToString);
-
         private class StructSyntaxReceiver : ISyntaxReceiver
         {
             public List<StructInfo> Nodes { get; } = new List<StructInfo>();
@@ -42,6 +52,8 @@ namespace IxSoftware.Generators
                 {
                     return;
                 }
+
+                var isComparable = s.BaseList.HasComparable(s.Identifier) ? IsComparable.Comparable : IsComparable.NonComparable;
                     
                 var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic()).ToArray();
 
@@ -60,52 +72,16 @@ namespace IxSoftware.Generators
                 }
 
                 // Find out if struct has a ToString() method already defined.
-                var toStringMethod = s.Members.OfType<MethodDeclarationSyntax>().Where(m => m.IsOverride() && string.Equals(m.Identifier.Text, nameof(object.ToString), StringComparison.Ordinal) && !m.ParameterList.Parameters.Any()).SingleOrDefault();
+                var hasToString = s.HasToStringMethod();
+
+                var validationMethod = s.HasValidateMethod() ? Validation.ValidateBool : Validation.NoValidation;
 
                 var f = fields[0];
-                Nodes.Add(new StructInfo(s, s.Identifier, f.Declaration.Variables[0].Identifier, f.Declaration.Type, toStringMethod != null));
+                Nodes.Add(new StructInfo(s, s.Identifier, f.Declaration.Variables[0].Identifier, f.Declaration.Type, isComparable, validationMethod, hasToString));
             }
         }
 
-        private static string? MakeTypeName(TypeSyntax type, SemanticModel semanticModel)
-        {
-            if (type is TupleTypeSyntax tupleType)
-            {
-                return MakeTupleTypeName(semanticModel, tupleType);
-            }
-            else
-            {
-                var typeSymbol = semanticModel.GetSymbolInfo(type);
-                if(typeSymbol.Symbol is null)
-                {
-                    return null;
-                }
-                return $"global::{typeSymbol.Symbol.ContainingNamespace}.{typeSymbol.Symbol.Name}";
-            }
-        }
-
-        private static string MakeTupleTypeName(SemanticModel semanticModel, TupleTypeSyntax tupleType)
-        {
-            var builder = new StringBuilder(tupleType.Span.Length);
-            builder.Append('(');
-            for (int i = 0; i < tupleType.Elements.Count; i++)
-            {
-                var item = tupleType.Elements[i];
-                builder.Append(MakeTypeName(item.Type, semanticModel));
-                if (!item.Identifier.IsMissing)
-                {
-                    builder.Append(' ');
-                    builder.Append(item.Identifier.ValueText);
-                }
-                if (i < tupleType.Elements.Count - 1)
-                {
-                    builder.Append(", ");
-                }
-            }
-            builder.Append(')');
-            return builder.ToString();
-        }
-
+        
         public void Execute(GeneratorExecutionContext context)
         {
             var syntaxReceiver = (StructSyntaxReceiver)(context.SyntaxReceiver ?? throw new InvalidOperationException("Missing syntax receiver!"));
@@ -113,6 +89,8 @@ namespace IxSoftware.Generators
             {
                 return;
             }
+
+            bool isNullableEnabled = context.Compilation.Options.NullableContextOptions != NullableContextOptions.Disable;
 
             var result = new StringBuilder(512);
 
@@ -125,10 +103,10 @@ namespace IxSoftware.Generators
                 }
 
                 var semanticModel = context.Compilation.GetSemanticModel(tree);
-                string name = s.Identifier.ToString();
                 
                 var symbol = semanticModel.GetDeclaredSymbol(s.Struct);
-                string? typeName = MakeTypeName(s.ValueType, semanticModel);
+                string? typeName = CodeBuilder.MakeTypeName(s.ValueType, semanticModel);
+
                 if(typeName is null || symbol is null)
                 {
                     continue;
@@ -136,65 +114,26 @@ namespace IxSoftware.Generators
 
                 result.Clear();
 
-                var isString = string.Equals(typeName, "global::System.String", StringComparison.Ordinal);
+                result.AddPreamble(symbol, s);
 
-                string text = @$"
-namespace {symbol.ContainingNamespace}
-{{  
-    public readonly partial struct {s.Identifier} : global::System.IEquatable<{s.Identifier}>
-    {{
+                result.AddConstructor(typeName, s);
 
-        private {s.Identifier}({typeName} value)
-        {{
-            this.{s.Value} = value;
-        }}
-";
-                result.Append(text);
-
-                if(isString)
-                {
-                    result.AppendLine(@$"        public bool Equals({s.Identifier} other) => this.{s.Value}.Equals(other.{s.Value}, global::System.StringComparison.Ordinal);");
-                }
-                else
-                {
-                    result.AppendLine($@"        public bool Equals({s.Identifier} other) => this.{s.Value}.Equals(other.{s.Value});");
-                }
-
-                text = 
-        @$"
-
-        public override bool Equals(object obj)
-        {{
-            if(obj is {s.Identifier} other)
-            {{
-                return this.Equals(other);
-            }}
-
-            return false;
-        }}
-        
-        public override int GetHashCode() => this.{s.Value}.GetHashCode();
-
-        public static explicit operator {typeName}({name} value) => value.{s.Value};
-
-        public static implicit operator {s.Identifier}({typeName} value) => new {s.Identifier}(value);
-
-        public static bool operator ==({name} lhs, {name} rhs) => lhs.Equals(rhs);
-
-        public static bool operator !=({name} lhs, {name} rhs) => !lhs.Equals(rhs);";
-                result.AppendLine(text);
+                result.AddEquals(typeName, isNullableEnabled, s);
 
                 if(!s.HasToString)
                 {
-                    result.AppendLine(@$"
-        public override string ToString() => ((global::System.FormattableString)$""{{{s.Value}}}"").ToString(global::System.Globalization.CultureInfo.InvariantCulture);");
+                    result.AddToString(typeName, s);
                 }
 
-                result.AppendLine(@"
-    }
-}");
+                if(s.Comparable == IsComparable.Comparable)
+                {
+                    result.AddComparison(s);
+                }
 
-                context.AddSource(@$"id-{s.Identifier}.cs", SourceText.From(result.ToString(), Encoding.UTF8));
+                result.AddEndOfFile();
+
+                var filename = @$"id-{s.Identifier}.cs";
+                context.AddSource(filename, SourceText.From(result.ToString(), Encoding.UTF8));
             }
         }
 

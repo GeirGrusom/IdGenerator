@@ -1,3 +1,10 @@
+# 1.2
+
+- Add `?` to Equals parameter if nullable is enabled.
+- Implements IComparable<T> automatically as well.
+- Casting operator now calls `bool Validate()` if such a method is defined and throws an `System.ArgumentException` if it returns `false`.
+- Using a DateTime or DateTimeOffset as a backing field will now return ISO 8601 date time in ToString by default.
+
 # 1.1.1
 
 - Fix for release of Visual Studio 2019 16.8 which changed the interface for source generators.

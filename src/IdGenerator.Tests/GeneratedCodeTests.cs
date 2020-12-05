@@ -31,6 +31,16 @@ namespace IdGenerator.Tests
         private readonly (StringTest, IntTest) value;
     }
 
+    public readonly partial struct DateTimeTest : IEquatable<DateTimeTest>
+    {
+        private readonly DateTime value;
+    }
+
+    public readonly partial struct DateTimeOffsetTest : IEquatable<DateTimeOffsetTest>
+    {
+        private readonly DateTimeOffset value;
+    }
+
     public class GeneratedCodeTests
     {
         [Test]
@@ -131,7 +141,7 @@ namespace IdGenerator.Tests
 
             // Act
             // Assert
-            Assert.That(a.Equals(null), Is.False);
+            Assert.That(a.Equals(null!), Is.False);
         }
 
         [Test]
@@ -156,6 +166,32 @@ namespace IdGenerator.Tests
             // Act
             // Assert
             Assert.That(a != b);
+        }
+
+        [Test]
+        public void ToString_DateTime_Utc_ReturnsIso8601()
+        {
+            // Arrange
+            var value = (DateTimeTest)new DateTime(2001, 03, 19, 12, 31, 24, DateTimeKind.Utc);
+
+            // Act
+            var result = value.ToString();
+
+            // Assert
+            Assert.That(result, Is.EqualTo("2001-03-19T12:31:24.0000000Z"));
+        }
+
+        [Test]
+        public void ToString_DateTimeOffset_ReturnsIso8601()
+        {
+            // Arrange
+            var value = (DateTimeOffsetTest)new DateTimeOffset(2001, 03, 19, 12, 31, 24, 0, TimeSpan.FromHours(1));
+
+            // Act
+            var result = value.ToString();
+
+            // Assert
+            Assert.That(result, Is.EqualTo("2001-03-19T12:31:24.0000000+01:00"));
         }
     }
 }
