@@ -23,5 +23,20 @@ namespace IxSoftware.Generators
         {
             return node.Types.Select(x => x.Type).OfType<GenericNameSyntax>().Any(x => string.Equals(x.Identifier.ValueText, nameof(IEquatable<int>), StringComparison.Ordinal) && x.TypeArgumentList.Arguments.Any(x => string.Equals(x.ToString(), equatableType.ToString(), StringComparison.Ordinal)));
         }
+
+        public static bool HasComparable(this BaseListSyntax node, SyntaxToken comparableType)
+        {
+            return node.Types.Select(x => x.Type).OfType<GenericNameSyntax>().Any(x => string.Equals(x.Identifier.ValueText, nameof(IComparable<int>), StringComparison.Ordinal) && x.TypeArgumentList.Arguments.Any(x => string.Equals(x.ToString(), comparableType.ToString(), StringComparison.Ordinal)));
+        }
+
+        public static bool HasToStringMethod(this StructDeclarationSyntax node)
+        {
+            return node.Members.OfType<MethodDeclarationSyntax>().Any(m => m.IsOverride() && string.Equals(m.Identifier.Text, nameof(object.ToString), StringComparison.Ordinal) && !m.ParameterList.Parameters.Any());
+        }
+
+        public static bool HasValidateMethod(this StructDeclarationSyntax node)
+        {
+            return node.Members.OfType<MethodDeclarationSyntax>().Any(x => string.Equals(x.Identifier.ValueText, "Validate", StringComparison.Ordinal));
+        }
     }
 }

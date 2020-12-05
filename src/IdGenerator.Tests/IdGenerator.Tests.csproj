@@ -3,6 +3,7 @@
 		<TargetFramework>net5.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<Target BeforeTargets="BeforeBuild" Name="CheckMSBuildVersion">
