@@ -3,6 +3,8 @@
 This project adds a source generator to your project that creates identity types. It's used for types that identifies some resource.
 For example a user id or application id.
 
+## IEquatable
+
 The source generator adds casting operators (explicit cast to, implicit cast from), equality checks, hash code, equals and `ToString()` (if it is not already provided).
 
 It will get applied to a partial readonly struct that specifies `IEquality` on itself and has a single private readonly field with no constructors defined.
@@ -21,6 +23,14 @@ This is all you have to write. Notice that this struct would not normally compil
 If you need more than a single field you can use a tuple on the value field. Note that the field doesn't have to be named value.
 
 You can add additional methods or static fields.
+
+Note that the default `ToString()` method uses InvariantCulture. This means that if the underlying type is a `DateTime` or `DateTimeOffset` the result will be the wonky US date format.
+
+## IComparable
+
+This library can also implement `IComparable<T>`. Simply add it to the list of interfaces and it should just work.
+
+This will implement `int CompareTo(T other)` and the four value comparison operators.
 
 ## Building
 
