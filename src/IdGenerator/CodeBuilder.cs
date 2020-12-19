@@ -1,8 +1,12 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
+using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
+
+[assembly: InternalsVisibleTo("IdGenerator.Tests")]
 
 namespace IxSoftware.Generators
 {
@@ -22,7 +26,8 @@ namespace {symbol.ContainingNamespace}
 
         public static void AddConstructor(this StringBuilder builder, string typeName, StructInfo structInfo)
         {
-            builder.AppendLine(@$"private {structInfo.Identifier}({typeName} value)
+            builder.AppendLine(@$"
+        private {structInfo.Identifier}({typeName} value)
         {{
             this.{structInfo.Value} = value;
         }}
@@ -121,7 +126,16 @@ namespace {symbol.ContainingNamespace}
                 {
                     return null;
                 }
-                return $"global::{typeSymbol.Symbol.ContainingNamespace}.{typeSymbol.Symbol.Name}";
+                
+                if(type is GenericNameSyntax genericName)
+                {
+                    return $"global::{typeSymbol.Symbol.ContainingNamespace}.{typeSymbol.Symbol.Name}<{string.Join(", ", genericName.TypeArgumentList.Arguments.Select(x => MakeTypeName(x, semanticModel)))}>";
+                }
+                else
+                {
+                    return $"global::{typeSymbol.Symbol.ContainingNamespace}.{typeSymbol.Symbol.Name}";
+                }
+                
             }
         }
 

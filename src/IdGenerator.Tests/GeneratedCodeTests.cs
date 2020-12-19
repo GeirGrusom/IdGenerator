@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
 using System.Threading;
 
 namespace IdGenerator.Tests
@@ -39,6 +40,16 @@ namespace IdGenerator.Tests
     public readonly partial struct DateTimeOffsetTest : IEquatable<DateTimeOffsetTest>
     {
         private readonly DateTimeOffset value;
+    }
+
+    public readonly partial struct Vector128Test : IEquatable<Vector128Test>
+    {
+        private readonly Vector128<byte> value;
+    }
+
+    public readonly partial struct Vector256Test : IEquatable<Vector256Test>
+    {
+        private readonly Vector256<byte> value;
     }
 
     public class GeneratedCodeTests
