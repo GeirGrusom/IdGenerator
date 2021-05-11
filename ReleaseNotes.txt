@@ -1,7 +1,15 @@
+# 1.2.2
+
+- Fixed `NullRefereneException` when using `default` as a comparison base with reference types as base type.
+
+# 1.2.1
+
+- Added support for generic types.
+
 # 1.2
 
 - Add `?` to Equals parameter if nullable is enabled.
-- Implements IComparable<T> automatically as well.
+- Implements `IComparable<T>` automatically as well.
 - Casting operator now calls `bool Validate()` if such a method is defined and throws an `System.ArgumentException` if it returns `false`.
 - Using a DateTime or DateTimeOffset as a backing field will now return ISO 8601 date time in ToString by default.
 

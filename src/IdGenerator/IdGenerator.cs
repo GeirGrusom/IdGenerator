@@ -106,6 +106,17 @@ namespace IxSoftware.Generators
                 
                 var symbol = semanticModel.GetDeclaredSymbol(s.Struct);
                 string? typeName = CodeBuilder.MakeTypeName(s.ValueType, semanticModel);
+                var typeSymbol = semanticModel.GetTypeInfo(s.ValueType).Type;
+
+                bool isReferenceType;
+                if (typeSymbol is not null)
+                {
+                    isReferenceType = typeSymbol.IsReferenceType;
+                }
+                else
+                {
+                    isReferenceType = false;
+                }
 
                 if(typeName is null || symbol is null)
                 {
@@ -118,7 +129,7 @@ namespace IxSoftware.Generators
 
                 result.AddConstructor(typeName, s);
 
-                result.AddEquals(typeName, isNullableEnabled, s);
+                result.AddEquals(typeName, isNullableEnabled, isReferenceType, s);
 
                 if(!s.HasToString)
                 {

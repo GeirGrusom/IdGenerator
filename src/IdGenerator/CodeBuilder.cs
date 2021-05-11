@@ -44,15 +44,22 @@ namespace {symbol.ContainingNamespace}
         }}");
         }
 
-        public static void AddEquals(this StringBuilder builder, string typeName, bool isNullableEnabled, StructInfo structInfo)
+        public static void AddEquals(this StringBuilder builder, string typeName, bool isNullableEnabled, bool isReferenceType, StructInfo structInfo)
         {
             if (IsString(typeName))
             {
-                builder.AppendLine(@$"        public bool Equals({structInfo.Identifier} other) => this.{structInfo.Value}.Equals(other.{structInfo.Value}, global::System.StringComparison.Ordinal);");
+                builder.AppendLine(@$"        public bool Equals({structInfo.Identifier} other) => global::System.String.Equals(this.{structInfo.Value}, other.{structInfo.Value}, global::System.StringComparison.Ordinal);");
             }
             else
             {
-                builder.AppendLine($@"        public bool Equals({structInfo.Identifier} other) => this.{structInfo.Value}.Equals(other.{structInfo.Value});");
+                if (isReferenceType)
+                {
+                    builder.AppendLine($@"        public bool Equals({structInfo.Identifier} other) => global::System.Object.Equals(this.{structInfo.Value}, other.{structInfo.Value});");
+                }
+                else
+                {
+                    builder.AppendLine($@"        public bool Equals({structInfo.Identifier} other) => this.{structInfo.Value}.Equals(other.{structInfo.Value});");
+                }
             }
 
             string equalsType = isNullableEnabled ? "object?" : "object";
@@ -61,6 +68,15 @@ namespace {symbol.ContainingNamespace}
 
         public override bool Equals({equalsType} obj)
         {{
+");
+
+            if(isReferenceType)
+            {
+                builder.Append($@"            if(obj is null) return false;
+");
+            }
+
+            builder.Append(@$"
             if(obj is {structInfo.Identifier} other)
             {{
                 return this.Equals(other);
@@ -68,8 +84,22 @@ namespace {symbol.ContainingNamespace}
 
             return false;
         }}
+");
+            if (isReferenceType)
+            {
+                builder.Append($@"
+        public override int GetHashCode() => this.{structInfo.Value} is null ? 0 : this.{structInfo.Value}.GetHashCode();
+");                
+            }
 
+            else
+            {
+                builder.Append($@"
         public override int GetHashCode() => this.{structInfo.Value}.GetHashCode();
+");
+            }
+
+            builder.Append($@"
 
         public static bool operator ==({structInfo.Identifier} lhs, {structInfo.Identifier} rhs) => lhs.Equals(rhs);
 

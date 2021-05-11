@@ -52,6 +52,11 @@ namespace IdGenerator.Tests
         private readonly Vector256<byte> value;
     }
 
+    public readonly partial struct UriTest : IEquatable<UriTest>
+    {
+        private readonly Uri value;
+    }
+
     public class GeneratedCodeTests
     {
         [Test]
@@ -190,6 +195,38 @@ namespace IdGenerator.Tests
 
             // Assert
             Assert.That(result, Is.EqualTo("2001-03-19T12:31:24.0000000Z"));
+        }
+
+        [Test]
+        public void Equals_CompareToDefaultNullable_String_AreNotEqual()
+        {
+            // Arrange
+            var value = (StringTest)"abc123";
+
+            // Act
+            Assert.That(value.Equals((object)default(StringTest)), Is.False);
+        }
+
+        [Test]
+        public void Equals_CompareToDefaultNullable_Uri_AreNotEqual()
+        {
+            // Arrange
+            var value = (UriTest)new Uri("https://localhost");
+            UriTest uri = default;
+
+            // Act
+            Assert.That(value.Equals((object)uri), Is.False);
+        }
+
+        [Test]
+        public void Equals_CompareToDefault_Uri_AreNotEqual()
+        {
+            // Arrange
+            var value = (UriTest)new Uri("https://localhost");
+            UriTest uri = default;
+
+            // Act
+            Assert.That(uri.Equals(value), Is.False);
         }
 
         [Test]
