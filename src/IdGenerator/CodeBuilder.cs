@@ -111,7 +111,7 @@ namespace {symbol.ContainingNamespace}
         public static void AddComparison(this StringBuilder builder, StructInfo structInfo)
         {
             builder.AppendLine($@"
-        public int CompareTo({structInfo.Identifier} other) => global::System.Collections.Generic.Comparer<{structInfo.Identifier}>.Default.Compare(this.{structInfo.Value}, other.{structInfo.Value});
+        public int CompareTo({structInfo.Identifier} other) => global::System.Collections.Generic.Comparer<{structInfo.ValueType}>.Default.Compare(this.{structInfo.Value}, other.{structInfo.Value});
         
         public static bool operator >({structInfo.Identifier} lhs, {structInfo.Identifier} rhs) => lhs.{structInfo.Value} > rhs.{structInfo.Value};
     

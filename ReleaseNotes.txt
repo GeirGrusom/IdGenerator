@@ -1,3 +1,7 @@
+# 1.2.3
+
+- Fixed `StackOverflowException` when using CompareTo.
+
 # 1.2.2
 
 - Fixed `NullRefereneException` when using `default` as a comparison base with reference types as base type.
