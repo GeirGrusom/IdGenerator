@@ -3,7 +3,7 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<LangVersion>11.0</LangVersion>
-    <Nullable>enable</Nullable>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<Target BeforeTargets="BeforeBuild" Name="CheckMSBuildVersion">
@@ -11,12 +11,12 @@
 	</Target>
 
 	<ItemGroup>
-		<PackageReference Include="nunit" Version="3.12.0" />
-		<PackageReference Include="NUnit3TestAdapter" Version="3.17.0">
+		<PackageReference Include="nunit" Version="4.2.2" />
+		<PackageReference Include="NUnit3TestAdapter" Version="4.6.0">
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
 	</ItemGroup>
 
 	<ItemGroup>

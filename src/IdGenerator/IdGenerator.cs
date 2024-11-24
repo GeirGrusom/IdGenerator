@@ -1,16 +1,16 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace System.Runtime.CompilerServices
 {
     public sealed class IsExternalInit { }
 }
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 namespace IxSoftware.Generators
 {
@@ -27,130 +27,115 @@ namespace IxSoftware.Generators
     }
 
     [Generator]
-    public sealed class IdGenerator : ISourceGenerator
+    public sealed class IdGenerator : IIncrementalGenerator
     {
-        private class StructSyntaxReceiver : ISyntaxReceiver
+        public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            public List<StructInfo> Nodes { get; } = new List<StructInfo>();
-
-            public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
-            {
-                if(!syntaxNode.IsKind(SyntaxKind.StructDeclaration))
-                {
-                    return;
-                }
-                var s = (StructDeclarationSyntax)syntaxNode;
-                    
-                // Struct must be partial.
-                if(!s.IsPartial())
-                {
-                    return;
-                }
-
-                // Struct must have IEquatable<T> where T is the type of the struct.
-                if(s.BaseList is null || !s.BaseList.HasEquatable(s.Identifier))
-                {
-                    return;
-                }
-
-                var isComparable = s.BaseList.HasComparable(s.Identifier) ? IsComparable.Comparable : IsComparable.NonComparable;
-                    
-                var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic()).ToArray();
-
-                // Struct must have a single non-static readonly field.
-                if (fields.Length != 1)
-                {
-                    return;
-                }
-
-                var field = fields[0];
-
-                // Field must be read only.
-                if(!field.IsReadOnly())
-                {
-                    return;
-                }
-
-                // Find out if struct has a ToString() method already defined.
-                var hasToString = s.HasToStringMethod();
-
-                var validationMethod = s.HasValidateMethod() ? Validation.ValidateBool : Validation.NoValidation;
-
-                var f = fields[0];
-                Nodes.Add(new StructInfo(s, s.Identifier, f.Declaration.Variables[0].Identifier, f.Declaration.Type, isComparable, validationMethod, hasToString));
-            }
+            var provider = context.SyntaxProvider.CreateSyntaxProvider(IsIdentityType, Transform);
+            context.RegisterSourceOutput(provider, GenerateSource);
+            
         }
 
-        
-        public void Execute(GeneratorExecutionContext context)
+        private void GenerateSource(SourceProductionContext context, StructInfo info)
         {
-            var syntaxReceiver = (StructSyntaxReceiver)(context.SyntaxReceiver ?? throw new InvalidOperationException("Missing syntax receiver!"));
-            if(syntaxReceiver is null)
+            var tree = info.Identifier.SyntaxTree;
+            if (tree is null)
             {
                 return;
             }
 
-            bool isNullableEnabled = context.Compilation.Options.NullableContextOptions != NullableContextOptions.Disable;
+            var result = new StringBuilder();
 
-            var result = new StringBuilder(512);
+            result.AddPreamble(info);
+            result.AddConstructor(info);
 
-            foreach (var s in syntaxReceiver.Nodes)
+            result.AddEquals(info);
+
+            if (!info.HasToString)
             {
-                var tree = s.Identifier.SyntaxTree;
-                if(tree is null)
-                {
-                    continue;
-                }
-
-                var semanticModel = context.Compilation.GetSemanticModel(tree);
-                
-                var symbol = semanticModel.GetDeclaredSymbol(s.Struct);
-                string? typeName = CodeBuilder.MakeTypeName(s.ValueType, semanticModel);
-                var typeSymbol = semanticModel.GetTypeInfo(s.ValueType).Type;
-
-                bool isReferenceType;
-                if (typeSymbol is not null)
-                {
-                    isReferenceType = typeSymbol.IsReferenceType;
-                }
-                else
-                {
-                    isReferenceType = false;
-                }
-
-                if(typeName is null || symbol is null)
-                {
-                    continue;
-                }
-
-                result.Clear();
-
-                result.AddPreamble(symbol, s);
-
-                result.AddConstructor(typeName, s);
-
-                result.AddEquals(typeName, isNullableEnabled, isReferenceType, s);
-
-                if(!s.HasToString)
-                {
-                    result.AddToString(typeName, s);
-                }
-
-                if(s.Comparable == IsComparable.Comparable)
-                {
-                    result.AddComparison(s);
-                }
-
-                result.AddEndOfFile();
-
-                var filename = @$"id-{s.Identifier}.cs";
-                context.AddSource(filename, SourceText.From(result.ToString(), Encoding.UTF8));
+                result.AddToString(info);
             }
+
+            if (info.Comparable == IsComparable.Comparable)
+            {
+                result.AddComparison(info);
+            }
+
+            result.AddEndOfFile();
+
+            var filename = @$"id-{info.Identifier}.cs";
+
+            context.AddSource(filename, result.ToString());
         }
 
-        public void Initialize(GeneratorInitializationContext context)
+        internal StructInfo Transform(GeneratorSyntaxContext context, CancellationToken cancellationToken)
         {
-            context.RegisterForSyntaxNotifications(() => new StructSyntaxReceiver());
+            var s = (StructDeclarationSyntax)context.Node;
+            var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic()).ToArray();
+
+            var field = fields[0];
+
+            var isComparable = s.BaseList?.HasComparable(s.Identifier) == true ? IsComparable.Comparable : IsComparable.NonComparable;
+
+            // Find out if struct has a ToString() method already defined.
+            var hasToString = s.HasToStringMethod();
+
+            var validationMethod = s.HasValidateMethod() ? Validation.ValidateBool : Validation.NoValidation;
+
+            var f = fields[0];
+            var valueType = f.Declaration.Type;
+
+            var fieldIdentifier = f.Declaration.Variables[0].Identifier;
+
+            var symbol = context.SemanticModel.GetDeclaredSymbol(s)!;
+            string? typeName = CodeBuilder.MakeTypeName(valueType, context.SemanticModel);
+            var typeSymbol = context.SemanticModel.GetTypeInfo(valueType).Type;
+            
+            bool isReferenceType;
+            if (typeSymbol is not null)
+            {
+                isReferenceType = typeSymbol.IsReferenceType;
+            }
+            else
+            {
+                isReferenceType = false;
+            }
+
+            bool nullable = context.SemanticModel.GetNullableContext(s.Span.Start)
+                is not NullableContext.Disabled;
+
+            return new StructInfo(s, typeName!, s.Identifier, fieldIdentifier, valueType, isComparable, validationMethod, hasToString, isReferenceType, symbol, typeSymbol!, nullable);
+        }
+
+        internal bool IsIdentityType(SyntaxNode node, CancellationToken cancellationToken)
+        {
+            if (!node.IsKind(SyntaxKind.StructDeclaration))
+            {
+                return false;
+            }
+            var s = (StructDeclarationSyntax)node;
+
+            // Struct must be partial.
+            if (!s.IsPartial())
+            {
+                return false;
+            }
+
+            // Struct must have IEquatable<T> where T is the type of the struct.
+            if (s.BaseList is not { } b || !b.HasEquatable(s.Identifier))
+            {
+                return false;
+            }
+
+            var fields = s.Members.OfType<FieldDeclarationSyntax>().Where(f => !f.IsStatic() && f.IsReadOnly()).ToArray();
+
+            // Struct must have a single non-static readonly field.
+            if (fields.Length != 1)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }
